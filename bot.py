@@ -43,14 +43,13 @@ def ask_gemini(question, items):
     
     prompt = f"{context}\n\nОтвечай коротко на русском. Вопрос: {question}"
     
-    # ИСПОЛЬЗУЕМ gemini-1.5-pro ДЛЯ БОЛЬШЕЙ СТАБИЛЬНОСТИ
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_KEY}"
+    # ИСПОЛЬЗУЕМ gemini-pro (более универсальная модель)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_KEY}"
     
     try:
         r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
         data = r.json()
         
-        # Проверка ответа
         if "candidates" in data and len(data["candidates"]) > 0:
             return data["candidates"][0]["content"]["parts"][0]["text"]
         else:
