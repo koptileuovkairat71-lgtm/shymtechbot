@@ -53,6 +53,7 @@ def ask_gemini(question, items):
     except Exception as e:
         print(f"DEBUG ERROR: {e}")
         return f"Ошибка ИИ: {str(e)}"
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Привет! Я помогу найти вещи в гараже.\n\n"
