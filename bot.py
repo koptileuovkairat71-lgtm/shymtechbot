@@ -1,8 +1,9 @@
 import os
 import json
 import requests
+import asyncio
 from telegram import Update
-from telegram.ext import Updater, MessageHandler, filters, CommandHandler, CallbackContext
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, CommandHandler, ContextTypes
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_KEY")
@@ -52,43 +53,38 @@ def ask_gemini(question, items):
     except:
         return "Ошибка ИИ. Попробуйте ещё раз."
 
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text(
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
         "👋 Привет! Я помогу найти вещи в гараже.\n\n"
         "➕ Добавить: «Ключ положил в шкаф»\n"
         "🔍 Найти: «Где ключи?»\n"
-        "📋 Список всего: /list"
+        "📋 Список: /list"
     )
 
-def list_items(update: Update, context: CallbackContext):
+async def list_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     items = load_items()
     if not items:
-        update.message.reply_text("📦 Список пустой. Добавьте вещи!")
+        await update.message.reply_text("📦 Список пустой!")
     else:
         msg = "📋 Все вещи:\n\n" + "\n".join([f"• {i['name']} → {i['location']}" for i in items])
-        update.message.reply_text(msg)
+        await update.message.reply_text(msg)
 
-def handle_message(update: Update, context: CallbackContext):
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     items = load_items()
     name, location = parse_add(text)
     if name and location:
         items.append({"name": name, "location": location})
         save_items(items)
-        update.message.reply_text(f"✅ Сохранено!\n📦 {name}\n📍 {location}")
+        await update.message.reply_text(f"✅ Сохранено!\n📦 {name}\n📍 {location}")
         return
     reply = ask_gemini(text, items)
-    update.message.reply_text(reply)
-
-def main():
-    updater = Updater(TELEGRAM_TOKEN)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("list", list_items))
-    dp.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Бот запущен!")
-    updater.start_polling()
-    updater.idle()
+    await update.message.reply_text(reply)
 
 if __name__ == "__main__":
-    main()
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("list", list_items))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    print("Бот запущен!")
+    app.run_polling(drop_pending_updates=True)
