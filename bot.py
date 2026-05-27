@@ -23,8 +23,8 @@ def parse_add(text):
     import re
     t = text.lower().strip()
     patterns = [
-        r"(.+)\s+(?:положил|положила|лежит|находится|стоит|висит|храню)\s+(?::в|на|под|за|около|у|рядом)\s+(.+)",
-        r"(?:положил|положила|убрал|кинул)\s+(.+)\s+(?::в|на|под|за)\s+(.+)",
+        r"(.+)\s+(?:положил|положила|лежит|находится|стоит|висит|храню)\s+(?:в|на|под|за|около|у|рядом)\s+(.+)",
+        r"(?:положил|положила|убрал|кинул)\s+(.+)\s+(?:в|на|под|за)\s+(.+)",
     ]
     for p in patterns:
         m = re.match(p, t)
@@ -43,8 +43,8 @@ def ask_gemini(question, items):
     
     prompt = f"{context}\n\nОтвечай коротко на русском. Вопрос: {question}"
     
-    # ИСПОЛЬЗУЕМ gemini-pro (более универсальная модель)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_KEY}"
+    # Использование модели gemini-1.5-pro, которая чаще доступна
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_KEY}"
     
     try:
         r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
@@ -56,16 +56,10 @@ def ask_gemini(question, items):
             return f"Ошибка ИИ: Ответ не содержит текста. Данные: {data}"
             
     except Exception as e:
-        print(f"DEBUG ERROR: {e}")
         return f"Ошибка ИИ: {str(e)}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👋 Привет! Я помогу найти вещи в гараже.\n\n"
-        "➕ Добавить: «Ключ положил в шкаф»\n"
-        "🔍 Найти: «Где ключи?»\n"
-        "📋 Список: /list"
-    )
+    await update.message.reply_text("👋 Привет! Я помогу найти вещи в гараже.\n➕ Добавить: «Ключ в шкафу»\n🔍 Найти: «Где ключи?»\n📋 Список: /list")
 
 async def list_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     items = load_items()
@@ -94,5 +88,4 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("list", list_items))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Бот запущен!")
     app.run_polling(drop_pending_updates=True)
