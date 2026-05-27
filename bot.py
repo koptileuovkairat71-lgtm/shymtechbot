@@ -5,6 +5,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTyp
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
+    # Код берет ключи именно из Railway
     gemini_key = os.environ.get("GEMINI_KEY")
     
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={gemini_key}"
@@ -15,7 +16,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data = response.json()
         reply = data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
-        reply = "Я работаю, но ИИ сейчас не ответил. Попробуй позже."
+        reply = "Ошибка связи с ИИ. Проверьте GEMINI_KEY в Railway."
         
     await update.message.reply_text(reply)
 
