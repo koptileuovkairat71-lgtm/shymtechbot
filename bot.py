@@ -50,9 +50,9 @@ def ask_gemini(question, items):
         r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
         data = r.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
-    except:
-        return "Ошибка ИИ. Попробуйте ещё раз."
-
+    except Exception as e:
+    print(f"DEBUG ERROR: {e}")
+    return f"Ошибка ИИ: {str(e)}"
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Привет! Я помогу найти вещи в гараже.\n\n"
