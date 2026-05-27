@@ -23,8 +23,8 @@ def parse_add(text):
     import re
     t = text.lower().strip()
     patterns = [
-        r"(.+)\s+(?:положил|положила|лежит|находится|стоит|висит|храню)\s+(?::в|на|под|за|около|у|рядом)\s+(.+)",
-        r"(?:положил|положила|убрал|кинул)\s+(.+)\s+(?::в|на|под|за)\s+(.+)",
+        r"(.+)\s+(?:положил|положила|лежит|находится|стоит|висит|храню)\s+(?:в|на|под|за|около|у|рядом)\s+(.+)",
+        r"(?:положил|положила|убрал|кинул)\s+(.+)\s+(?:в|на|под|за)\s+(.+)",
     ]
     for p in patterns:
         m = re.match(p, t)
@@ -43,7 +43,7 @@ def ask_gemini(question, items):
     
     prompt = f"{context}\n\nОтвечай коротко на русском. Вопрос: {question}"
     
-    # Используем проверенную стабильную модель gemini-pro
+    # ИСПОЛЬЗУЕМ gemini-pro (самая совместимая модель для всех ключей)
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_KEY}"
     
     try:
@@ -59,20 +59,12 @@ def ask_gemini(question, items):
         return f"Ошибка ИИ: {str(e)}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👋 Привет! Я помогу найти вещи в гараже.\n\n"
-        "➕ Добавить: «Ключ в шкафу»\n"
-        "🔍 Найти: «Где ключи?»\n"
-        "📋 Список: /list"
-    )
+    await update.message.reply_text("👋 Гаражный хранитель готов!\n➕ Добавить: «Дрель на полке»\n🔍 Найти: «Где дрель?»")
 
 async def list_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     items = load_items()
-    if not items:
-        await update.message.reply_text("📋 Список пустой!")
-    else:
-        msg = "📋 Все вещи:\n\n" + "\n".join([f"• {i['name']} → {i['location']}" for i in items])
-        await update.message.reply_text(msg)
+    msg = "📋 Все вещи:\n\n" + "\n".join([f"• {i['name']} → {i['location']}" for i in items]) if items else "📋 Список пустой!"
+    await update.message.reply_text(msg)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
@@ -82,11 +74,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if name and location:
         items.append({"name": name, "location": location})
         save_items(items)
-        await update.message.reply_text(f"✅ Сохранено!\n{name}: {location}")
-        return
-    
-    reply = ask_gemini(text, items)
-    await update.message.reply_text(reply)
+        await update.message.reply_text(f"✅ Сохранено: {name} → {location}")
+    else:
+        reply = ask_gemini(text, items)
+        await update.message.reply_text(reply)
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
