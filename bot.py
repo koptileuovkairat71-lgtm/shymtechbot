@@ -2,7 +2,7 @@ import os
 import json
 import requests
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
+from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, CallbackContext
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_KEY")
@@ -39,13 +39,11 @@ def ask_gemini(question, items):
         context = "Список вещей в гараже:\n" + "\n".join([f"• {i['name']} → {i['location']}" for i in items])
     else:
         context = "Список вещей пустой."
-    
     prompt = f"""{context}
 
 Отвечай коротко на русском. Если вещь есть — скажи где лежит. Если нет — скажи что не знаешь.
 
 Вопрос: {question}"""
-
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
     try:
         r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
@@ -54,41 +52,43 @@ def ask_gemini(question, items):
     except:
         return "Ошибка ИИ. Попробуйте ещё раз."
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text(
         "👋 Привет! Я помогу найти вещи в гараже.\n\n"
         "➕ Добавить: «Ключ положил в шкаф»\n"
         "🔍 Найти: «Где ключи?»\n"
         "📋 Список всего: /list"
     )
 
-async def list_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def list_items(update: Update, context: CallbackContext):
     items = load_items()
     if not items:
-        await update.message.reply_text("📦 Список пустой. Добавьте вещи!")
+        update.message.reply_text("📦 Список пустой. Добавьте вещи!")
     else:
         msg = "📋 Все вещи:\n\n" + "\n".join([f"• {i['name']} → {i['location']}" for i in items])
-        await update.message.reply_text(msg)
+        update.message.reply_text(msg)
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_message(update: Update, context: CallbackContext):
     text = update.message.text.strip()
     items = load_items()
     name, location = parse_add(text)
     if name and location:
         items.append({"name": name, "location": location})
         save_items(items)
-        await update.message.reply_text(f"✅ Сохранено!\n📦 {name}\n📍 {location}")
+        update.message.reply_text(f"✅ Сохранено!\n📦 {name}\n📍 {location}")
         return
     reply = ask_gemini(text, items)
-    await update.message.reply_text(reply)
+    update.message.reply_text(reply)
 
 def main():
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("list", list_items))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    updater = Updater(TELEGRAM_TOKEN)
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("list", list_items))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
     print("Бот запущен!")
-    app.run_polling(drop_pending_updates=True)
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
     main()
